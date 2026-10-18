@@ -14,6 +14,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # 禁止 uv 下载自带 Python：Windows runner 上官方 Python 的 Tcl/Tk 更完整
+  UV_PYTHON_DOWNLOADS: never
+
 jobs:
   test:
     name: Lint, type check & test
@@ -24,17 +28,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock
 
-      - name: Set up Python
-        run: uv python install 3.12
-
       - name: Install dependencies
-        run: uv sync --locked --group dev
+        run: uv sync --locked --group dev --python 3.12
+
+      - name: Verify Tk
+        run: uv run python -c "import tkinter as tk; print('Tk', tk.TkVersion)"
 
       - name: Lint
         run: uv run ruff check .
