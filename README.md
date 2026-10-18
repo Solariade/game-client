@@ -130,11 +130,14 @@ dist/game-client-v1.0.0/
 - [开发规范](docs/development.md)
 - [LLM 接入说明](docs/llm-integration.md)
 - [归档：完整开发方案](docs/archive/development-plan.md)
+- [更新日志](CHANGELOG.md)
 
 ## 贡献
 
-欢迎提交 Issue 与 Pull Request。开始前请阅读 [开发规范](docs/development.md)，
-并确保 `ruff`、`mypy`、`pytest` 全部通过。
+欢迎提交 Issue 与 Pull Request。开始前请阅读 [贡献指南](CONTRIBUTING.md) 与
+[开发规范](docs/development.md)，并确保 `ruff`、`mypy`、`pytest` 全部通过。
+
+安全漏洞请按 [安全策略](SECURITY.md) 私下报告，不要公开提交 Issue。
 
 ## License
 
