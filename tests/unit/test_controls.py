@@ -15,11 +15,9 @@ MODELS = [("", ""), ("glm", "GLM")]
 
 
 @pytest.fixture()
-def panel() -> ControlsPanel:
-    root = tk.Tk()
-    root.withdraw()
-    p = ControlsPanel(
-        root,
+def panel(tk_root: tk.Tk) -> ControlsPanel:
+    yield ControlsPanel(
+        tk_root,
         model_names=MODELS,
         on_model_change=lambda _n: None,
         on_difficulty_change=lambda _d: None,
@@ -27,8 +25,6 @@ def panel() -> ControlsPanel:
         on_suggestion_change=lambda _s: None,
         on_restart=lambda: None,
     )
-    yield p
-    root.destroy()
 
 
 def test_blank_is_default_model(panel: ControlsPanel) -> None:

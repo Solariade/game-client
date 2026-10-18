@@ -10,12 +10,8 @@ from app.ui.analysis_panel import AnalysisPanel
 
 
 @pytest.fixture()
-def panel():
-    root = tk.Tk()
-    root.withdraw()
-    p = AnalysisPanel(root)
-    yield p
-    root.destroy()
+def panel(tk_root: tk.Tk):
+    yield AnalysisPanel(tk_root)
 
 
 def text_of(panel: AnalysisPanel) -> str:

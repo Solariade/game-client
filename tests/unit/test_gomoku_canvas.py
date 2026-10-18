@@ -15,12 +15,8 @@ STAR_OVALS = 5  # 五个星位圆点
 
 
 @pytest.fixture()
-def canvas():
-    root = tk.Tk()
-    root.withdraw()
-    c = GomokuCanvas(root, on_click=None)
-    yield c
-    root.destroy()
+def canvas(tk_root: tk.Tk):
+    yield GomokuCanvas(tk_root, on_click=None)
 
 
 def _items(canvas: GomokuCanvas, tag: str) -> tuple[int, ...]:

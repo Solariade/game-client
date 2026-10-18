@@ -40,10 +40,13 @@ jobs:
           cache-dependency-glob: uv.lock
 
       - name: Install dependencies
-        run: uv sync --locked --group dev --python 3.12
+        run: |
+          uv sync --locked --group dev --python "$env:pythonLocation\python.exe"
+          uv run python -c "import sys; print('Python:', sys.executable)"
 
-      - name: Verify Tk
-        run: uv run python -c "import tkinter as tk; print('Tk', tk.TkVersion)"
+      - name: Probe Tk
+        continue-on-error: true
+        run: uv run python -c "import tkinter as tk; r = tk.Tk(); r.destroy(); print('Tk', tk.TkVersion, 'OK')"
 
       - name: Lint
         run: uv run ruff check .
