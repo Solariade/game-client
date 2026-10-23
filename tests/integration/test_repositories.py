@@ -42,8 +42,8 @@ class TestMoveRepository:
         games = GameRepository(conn)
         moves = MoveRepository(conn)
         gid = games.create_game()
-        moves.add_move(gid, 1, "user", 7, 7)
-        moves.add_move(gid, 2, "ai", 8, 8, llm_commentary=None)
+        moves.add_move(gid, 1, "user", "7,7")
+        moves.add_move(gid, 2, "ai", "8,8", llm_commentary=None)
         rows = moves.list_moves(gid)
         assert len(rows) == 2
         assert rows[0]["position"] == "7,7"
@@ -54,7 +54,7 @@ class TestMoveRepository:
         games = GameRepository(conn)
         moves = MoveRepository(conn)
         gid = games.create_game()
-        mid = moves.add_move(gid, 2, "ai", 8, 8)
+        mid = moves.add_move(gid, 2, "ai", "8,8")
         moves.update_commentary(mid, "你这一步意在连三……")
         rows = moves.list_moves(gid)
         assert rows[0]["llm_commentary"] == "你这一步意在连三……"

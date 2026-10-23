@@ -8,6 +8,7 @@ from app.ai.base_engine import BaseEngine
 from app.core.base_game import Move
 from app.core.gomoku.board import GomokuBoard
 from app.services.game_service import GameService
+from app.services.game_spec import make_xiangqi_spec
 
 
 class ScriptedEngine(BaseEngine):
@@ -129,6 +130,48 @@ class TestTurnFlow:
         assert service.game_over is True
         assert service.user_turn is False
         assert result.win_line is not None
+
+    def test_undo_two_plies_gomoku(self) -> None:
+        service = GameService(board=GomokuBoard(), engine=ScriptedEngine([(7, 8)]), user_color=1)
+        assert service.can_undo is False
+        service.user_move(7, 7)
+        assert service.can_undo is False  # 轮到 AI，不能悔棋
+        service.take_ai_turn()
+        assert service.can_undo is True
+        assert service.undo_round() == 2
+        assert service.board.moves_count == 0
+        assert service.user_turn is True
+        assert service.can_undo is False
+
+    def test_undo_two_plies_xiangqi_restores_position(self) -> None:
+        service = GameService(
+            engine=ScriptedEngine([(0, 7, 2, 6)]), user_color=1, spec=make_xiangqi_spec()
+        )
+        service.play_user_move(Move(7, 7, 7, 4))  # 炮二平五
+        service.take_ai_turn()  # 马 8 进 7
+        assert service.undo_round() == 2
+        assert service.board.moves_count == 0
+        assert service.board.grid[7][7] == "C"  # 红炮归位
+        assert service.board.grid[0][7] == "n"  # 黑马归位
+
+    def test_undo_after_win_restores_play(self) -> None:
+        """终局后悔棋只撤销致胜一步，并恢复可续弈状态。"""
+        service = GameService(board=GomokuBoard(), user_color=1)
+        for c in range(4):
+            service.user_move(7, c)
+        service.user_move(7, 4)
+        assert service.game_over is True
+        assert service.can_undo is True
+        assert service.undo_round() == 1
+        assert service.game_over is False
+        assert service.user_turn is True
+        assert service.board.moves_count == 4
+
+    def test_undo_rejected_when_not_user_turn(self) -> None:
+        service = GameService(board=GomokuBoard(), user_color=1)
+        service.user_move(7, 7)
+        with pytest.raises(RuntimeError):
+            service.undo_round()
 
     def test_full_board_draw(self) -> None:
         small = GomokuBoard(size=3)

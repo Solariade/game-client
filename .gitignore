@@ -13,6 +13,9 @@ htmlcov/
 # 运行时产物
 runtime/
 
+# 外部引擎（Pikafish，用户自行下载；GPL-3.0，不入库）
+assets/engines/
+
 # 打包产物
 build/
 dist/

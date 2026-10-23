@@ -89,6 +89,10 @@ class GomokuBoard(BaseGame):
             if self.grid[r][c] == EMPTY
         ]
 
+    def is_playable(self, move: Move) -> bool:
+        """建议落点可用 = 界内空位。"""
+        return in_bounds(move.row, move.col, self.size) and self.grid[move.row][move.col] == EMPTY
+
     def candidate_moves(self, distance: int = 2) -> list[Move]:
         """已有棋子周围 distance 格内的空位；空盘返回中心点。"""
         moves = [

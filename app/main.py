@@ -27,7 +27,14 @@ def main() -> int:
         return 1
 
     root = tk.Tk()
-    MainWindow(root, ctx.game_service, ctx.commentary_service, ctx.llm_registry)
+    MainWindow(
+        root,
+        ctx.game_service,
+        ctx.commentary_service,
+        ctx.llm_registry,
+        service_factory=ctx.game_factory,
+        xiangqi_virtual_piece=ctx.settings.XIANGQI_VIRTUAL_PIECE,
+    )
     root.mainloop()
     return 0
 

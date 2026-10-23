@@ -6,6 +6,7 @@ import sqlite3
 from typing import Any
 
 GAME_TYPE_GOMOKU = "gomoku"
+GAME_TYPE_XIANGQI = "xiangqi"
 
 
 class GameRepository:
@@ -32,6 +33,11 @@ class GameRepository:
         self._conn.execute("UPDATE games SET result = ? WHERE id = ?", (result, game_id))
         self._conn.commit()
 
+    def clear_result(self, game_id: int) -> None:
+        """悔棋回到进行中：清除已写入的终局结果。"""
+        self._conn.execute("UPDATE games SET result = 'ongoing' WHERE id = ?", (game_id,))
+        self._conn.commit()
+
     def get_game(self, game_id: int) -> dict[str, Any] | None:
         cur = self._conn.execute("SELECT * FROM games WHERE id = ?", (game_id,))
         row = cur.fetchone()
@@ -47,15 +53,15 @@ class MoveRepository:
         game_id: int,
         move_number: int,
         player: str,
-        row: int,
-        col: int,
+        position: str,
         llm_commentary: str | None = None,
     ) -> int:
-        """写入一步棋，返回 move id。"""
+        """写入一步棋，返回 move id。position 由 service 层按棋种格式化
+        （五子棋 '行,列'、象棋 ICCS 'h2e2'）。"""
         cur = self._conn.execute(
             "INSERT INTO moves (game_id, move_number, player, position, llm_commentary) "
             "VALUES (?, ?, ?, ?, ?)",
-            (game_id, move_number, player, f"{row},{col}", llm_commentary),
+            (game_id, move_number, player, position, llm_commentary),
         )
         self._conn.commit()
         return int(cur.lastrowid or 0)
@@ -72,3 +78,16 @@ class MoveRepository:
             "SELECT * FROM moves WHERE game_id = ? ORDER BY move_number", (game_id,)
         )
         return [dict(row) for row in cur.fetchall()]
+
+    def delete_last_moves(self, game_id: int, count: int) -> int:
+        """删除该局最后 count 步（悔棋用），返回删除行数。"""
+        if count <= 0:
+            return 0
+        cur = self._conn.execute(
+            "DELETE FROM moves WHERE id IN ("
+            "SELECT id FROM moves WHERE game_id = ? ORDER BY move_number DESC LIMIT ?"
+            ")",
+            (game_id, count),
+        )
+        self._conn.commit()
+        return int(cur.rowcount or 0)

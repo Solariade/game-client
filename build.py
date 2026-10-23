@@ -1,10 +1,12 @@
 """game-client 打包入口：PyInstaller 编程接口，目录模式，资源外置。
 
-参考 tool_sync_pic 的打包约定：
+打包约定：
 - 版本号取自 pyproject.toml，并写入 Windows exe 的版本信息；
 - 产物目录带版本号：dist/game-client-v<version>/；
 - 由 .env.example 生成产物中的 .env（不含真实 Key）；
 - 随包附带 README、LICENSE、使用说明与版本信息；
+- 本地装有 Pikafish（assets/engines/）时随包拷贝，并附 GPL-3.0 许可说明；
+  未安装时在产物中放置下载指引，象棋模式按设计禁用；
 - 每次打包前清理 build/ 与 dist/。
 
 用法：
@@ -25,6 +27,8 @@ ROOT = Path(__file__).resolve().parent
 ENTRY = ROOT / "app" / "__main__.py"
 ASSETS = ROOT / "assets"
 ICON = ASSETS / "logo.ico"
+ENGINES = ASSETS / "engines"
+PIKAFISH_EXE = ENGINES / "pikafish.exe"
 ENV_EXAMPLE = ROOT / ".env.example"
 README_FILE = ROOT / "README.md"
 LICENSE_FILE = ROOT / "LICENSE"
@@ -32,6 +36,37 @@ USER_GUIDE = ROOT / "docs" / "使用说明.txt"
 DIST = ROOT / "dist"
 BUILD = ROOT / "build"
 APP_NAME = "game-client"
+
+# 引擎随包分发时的许可说明（Pikafish 为 GPL-3.0，需附来源与许可指引）
+PIKAFISH_LICENSE_NOTE = """本分发包内的 assets/engines/ 包含 Pikafish 象棋引擎
+（pikafish.exe 与 pikafish.nnue 权重文件）。
+
+Pikafish 采用 GNU General Public License v3.0（GPL-3.0）授权，
+源代码与完整许可文本见官方仓库：
+    https://github.com/official-pikafish/Pikafish
+
+若再分发本包，须同时遵守 GPL-3.0 的条款（附许可文本与源码获取方式）。
+不带引擎分发包时，删除 assets/engines/ 下的引擎文件即可——
+程序会自动禁用象棋模式（棋种下拉仅五子棋），五子棋不受影响。
+"""
+
+# 引擎未随包时的下载指引（放入 assets/engines/ 即可启用象棋）
+PIKAFISH_DOWNLOAD_GUIDE = """象棋引擎（Pikafish）安装指引
+================================
+
+本包未内置象棋引擎，启动后「棋种」下拉中只有五子棋；
+按以下步骤安装后即可启用象棋模式（无需重新安装本程序）。
+
+1. 打开发布页：https://github.com/official-pikafish/Pikafish/releases
+2. 下载 Windows 版压缩包（不知 CPU 型号就选 universal 版，
+   其余按 CPU 指令集选 sse41-popcnt / avx2 / bmi2，棋力更强）；
+3. 解压后把 pikafish.exe、pikafish.nnue 与许可文件一起
+   放入本目录（assets/engines/），保持与 exe 同目录；
+4. 重新启动 game-client.exe，「棋种」下拉出现「象棋」即成功。
+
+Pikafish 为 GPL-3.0 开源项目；也可在 .env 中用 XIANGQI_ENGINE_PATH
+指定其它位置的引擎 exe。详细说明见仓库 docs/pikafish-setup.md。
+"""
 
 
 def _info(message: str) -> None:
@@ -67,7 +102,7 @@ VSVersionInfo(
     StringFileInfo([
       StringTable('080404b0', [
         StringStruct('CompanyName', 'game-client'),
-        StringStruct('FileDescription', '五子棋 AI 对弈学习'),
+        StringStruct('FileDescription', '五子棋与象棋 AI 对弈'),
         StringStruct('FileVersion', '{version}'),
         StringStruct('InternalName', 'game-client'),
         StringStruct('OriginalFilename', 'game-client.exe'),
@@ -91,12 +126,25 @@ def clean() -> None:
 
 
 def copy_assets_to(dist_dir: Path) -> None:
-    """资源外置：将 assets/ 拷到 exe 同级目录。"""
+    """资源外置：将 assets/ 拷到 exe 同级目录（含 engines/，若本地已安装）。"""
     target = dist_dir / "assets"
     if target.exists():
         shutil.rmtree(target)
     shutil.copytree(ASSETS, target)
     _info(f"assets/ 已拷贝至 {target}")
+
+
+def finalize_engines(dist_dir: Path) -> None:
+    """按引擎有无收尾：有引擎附 GPL 许可说明，无引擎放下载指引。"""
+    engines_dir = dist_dir / "assets" / "engines"
+    if PIKAFISH_EXE.exists():
+        engines_dir.mkdir(parents=True, exist_ok=True)
+        (engines_dir / "引擎许可说明.txt").write_text(PIKAFISH_LICENSE_NOTE, encoding="utf-8")
+        _info("已随包拷贝 Pikafish 并附 GPL-3.0 许可说明（再分发须遵守 GPL）")
+    else:
+        engines_dir.mkdir(parents=True, exist_ok=True)
+        (engines_dir / "下载指引.txt").write_text(PIKAFISH_DOWNLOAD_GUIDE, encoding="utf-8")
+        _info("未检测到 Pikafish：产物含下载指引，象棋模式将按设计禁用")
 
 
 def copy_extra_files(out_dir: Path, version: str) -> None:
@@ -136,6 +184,7 @@ def finalize_output(out_dir: Path, version: str) -> None:
 
     (DIST / APP_NAME).rename(out_dir)
     copy_assets_to(out_dir)
+    finalize_engines(out_dir)
     copy_extra_files(out_dir, version)
 
 

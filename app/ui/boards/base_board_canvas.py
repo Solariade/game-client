@@ -14,6 +14,7 @@ class BaseBoardCanvas(tk.Canvas, ABC):
     """各棋种棋盘渲染的公共骨架。
 
     注意：棋盘尺寸属性命名 board_size，避免与 tk.Canvas.size() 方法冲突。
+    board_size 表示列数，rows 表示行数；缺省 rows = board_size（方正棋盘）。
     """
 
     def __init__(
@@ -23,12 +24,16 @@ class BaseBoardCanvas(tk.Canvas, ABC):
         cell: int,
         margin: int,
         on_click: Callable[[Move], None] | None = None,
+        *,
+        rows: int | None = None,
         **kwargs: Any,
     ) -> None:
+        rows = board_size if rows is None else rows
         width = margin * 2 + cell * (board_size - 1)
-        height = margin * 2 + cell * (board_size - 1)
+        height = margin * 2 + cell * (rows - 1)
         super().__init__(master, width=width, height=height, highlightthickness=0, **kwargs)
         self.board_size = board_size
+        self.rows = rows
         self.cell = cell
         self.margin = margin
         self.on_click = on_click

@@ -11,10 +11,16 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Move:
-    """一步棋的坐标（行、列，0 起始）。"""
+    """一步棋的坐标（行、列，0 起始）。
+
+    五子棋只用起点 (row, col)；象棋是「起点 → 终点」着法，
+    终点写在 to_row / to_col（五子棋恒为 None，互不影响）。
+    """
 
     row: int
     col: int
+    to_row: int | None = None  # 象棋终点行；五子棋不使用
+    to_col: int | None = None  # 象棋终点列；五子棋不使用
 
 
 class BaseGame(ABC):
@@ -48,6 +54,10 @@ class BaseGame(ABC):
     def valid_moves(self) -> list[Move]:
         """当前全部合法落点。"""
 
+    @abstractmethod
+    def is_playable(self, move: Move) -> bool:
+        """建议着法是否可用（五子棋=空位；象棋=己方子起手且该着合法）。"""
+
     @property
     @abstractmethod
     def move_history(self) -> list[Move]:
@@ -55,5 +65,14 @@ class BaseGame(ABC):
 
     @property
     @abstractmethod
+    def moves_count(self) -> int:
+        """已落子数（服务层据此推断行棋轮次）。"""
+
+    @property
+    @abstractmethod
     def winner(self) -> int | None:
         """胜者棋色；未分出胜负时为 None。"""
+
+    def win_line(self) -> list[Move] | None:
+        """取胜连线坐标（供 UI 高亮）；棋种无此概念时返回 None（如象棋）。"""
+        return None

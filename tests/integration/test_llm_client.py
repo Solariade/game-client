@@ -100,10 +100,7 @@ class TestCommentaryService:
         done: list[str] = []
         full = CommentaryService().generate(
             make_client(),
-            board,
-            user_move=Move(7, 7),
-            ai_move=Move(7, 8),
-            user_color=1,
+            "提示词（棋种无关）",
             on_chunk=chunks.append,
             on_done=done.append,
         )
@@ -117,5 +114,5 @@ class TestCommentaryService:
         board = GomokuBoard()
         board.place(Move(7, 7), 1)
         board.place(Move(7, 8), -1)
-        full = CommentaryService().generate(make_client(), board, Move(7, 7), Move(7, 8), 1)
+        full = CommentaryService().generate(make_client(), "提示词（棋种无关）")
         assert full == FALLBACK_TEXT

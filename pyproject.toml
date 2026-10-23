@@ -1,7 +1,7 @@
 [project]
 name = "game-client"
-version = "1.0.0"
-description = "五子棋 AI 对弈学习 Windows 桌面应用（本地引擎 + LLM 解说）"
+version = "1.1.0"
+description = "五子棋与象棋 AI 对弈 Windows 桌面应用（本地引擎 + LLM 解说）"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

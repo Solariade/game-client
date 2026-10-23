@@ -68,3 +68,97 @@ def test_layout_is_three_by_two(panel: ControlsPanel) -> None:
     assert len(cells) == 5
     assert sum(1 for w in cells if w.grid_info()["row"] == 0) == 3
     assert sum(1 for w in cells if w.grid_info()["row"] == 1) == 2
+
+
+def make_multi_game_panel(tk_root: tk.Tk, selected: list[str]) -> ControlsPanel:
+    """带棋种切换的设置区（记录回调触发）。"""
+    panel = ControlsPanel(
+        tk_root,
+        model_names=MODELS,
+        on_model_change=lambda _n: None,
+        on_difficulty_change=lambda _d: None,
+        on_color_change=lambda _c: None,
+        on_suggestion_change=lambda _s: None,
+        on_restart=lambda: None,
+        game_options=[("gomoku", "五子棋"), ("xiangqi", "象棋")],
+        on_game_change=selected.append,
+    )
+    return panel
+
+
+class TestGameDropdown:
+    def test_default_single_game_disabled(self, panel: ControlsPanel) -> None:
+        """未传 game_options：棋种下拉只有五子棋且禁用。"""
+        assert panel.current_game == "gomoku"
+        assert str(panel._game_var.get()) == "五子棋"
+
+    def test_multi_game_current_game_mapping(self, tk_root: tk.Tk) -> None:
+        panel = make_multi_game_panel(tk_root, [])
+        assert panel.current_game == "gomoku"
+        panel._game_var.set("象棋")
+        assert panel.current_game == "xiangqi"
+
+    def test_game_change_callback_fires(self, tk_root: tk.Tk) -> None:
+        """下拉选中象棋 → 触发 <<ComboboxSelected>> → 回调收到内部名。"""
+        selected: list[str] = []
+        panel = make_multi_game_panel(tk_root, selected)
+        panel._game_var.set("象棋")
+        panel._game_box.event_generate("<<ComboboxSelected>>")
+        tk_root.update()
+        assert selected == ["xiangqi"]
+
+    def test_set_game_reverts(self, tk_root: tk.Tk) -> None:
+        panel = make_multi_game_panel(tk_root, [])
+        panel._game_var.set("象棋")
+        panel.set_game("gomoku")
+        assert panel.current_game == "gomoku"
+
+
+class TestUndoButton:
+    def test_no_undo_button_without_callback(self, panel: ControlsPanel) -> None:
+        assert panel._undo_button is None
+        panel.set_undo_enabled(True)  # 无按钮时应静默忽略
+
+    def test_undo_button_toggles_and_invokes(self, tk_root: tk.Tk) -> None:
+        calls: list[int] = []
+        panel = ControlsPanel(
+            tk_root,
+            model_names=MODELS,
+            on_model_change=lambda _n: None,
+            on_difficulty_change=lambda _d: None,
+            on_color_change=lambda _c: None,
+            on_suggestion_change=lambda _s: None,
+            on_restart=lambda: None,
+            on_undo=lambda: calls.append(1),
+        )
+        assert panel._undo_button is not None
+        panel.set_undo_enabled(False)
+        assert str(panel._undo_button["state"]) == "disabled"
+        panel.set_undo_enabled(True)
+        panel._undo_button.invoke()
+        assert calls == [1]
+
+
+class TestColorCellPerGame:
+    def test_default_is_gomoku_black(self, tk_root: tk.Tk) -> None:
+        panel = make_multi_game_panel(tk_root, [])
+        assert panel.current_user_color == 1
+        panel.set_user_color(-1)
+        assert panel.current_user_color == -1
+
+    def test_apply_game_keeps_first_player_choice(self, tk_root: tk.Tk) -> None:
+        """切到象棋后标签变执红、取值变我执红/AI执红，先手选择保持。"""
+        panel = make_multi_game_panel(tk_root, [])
+        panel.set_user_color(-1)  # AI 先手
+        panel.apply_game("xiangqi")
+        assert panel._color_var.get() == "AI执红"
+        assert panel.current_user_color == -1
+        panel.apply_game("gomoku")
+        assert panel._color_var.get() == "AI执黑"
+        assert panel.current_user_color == -1
+
+    def test_apply_game_first_player(self, tk_root: tk.Tk) -> None:
+        panel = make_multi_game_panel(tk_root, [])
+        panel.apply_game("xiangqi")
+        assert panel._color_var.get() == "我执红"
+        assert panel.current_user_color == 1

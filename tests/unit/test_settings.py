@@ -58,6 +58,15 @@ class TestSettings:
         assert cfg["model"] == "moonshot-v1-8k"
         assert cfg["api_key"] == ""
 
+    def test_xiangqi_virtual_piece_default_off(self, tmp_path) -> None:
+        """象棋虚拟棋子默认关闭：点落点直接走子。"""
+        s = load_settings(write_env(tmp_path, "DEFAULT_LLM=deepseek\n"))
+        assert s.XIANGQI_VIRTUAL_PIECE is False
+
+    def test_xiangqi_virtual_piece_can_be_enabled(self, tmp_path) -> None:
+        s = load_settings(write_env(tmp_path, "XIANGQI_VIRTUAL_PIECE=true\n"))
+        assert s.XIANGQI_VIRTUAL_PIECE is True
+
     def test_direct_construction_without_key(self) -> None:
         """直接构造 Settings 时，没有 Key 也不再报校验错误。"""
         s = Settings(_env_file=None, DEEPSEEK_API_KEY="")  # type: ignore[call-arg]

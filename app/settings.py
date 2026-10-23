@@ -44,7 +44,12 @@ class Settings(BaseSettings):
     DOUBAO_MODEL: str = ""
 
     LOG_LEVEL: str = "INFO"
-    DB_PATH: str = "runtime/data/gomoku.db"
+    # 五子棋与象棋共用同一库（games.game_type 区分）
+    DB_PATH: str = "runtime/data/game.db"
+    # 象棋引擎（Pikafish）路径；空 = 默认 assets/engines/pikafish.exe
+    XIANGQI_ENGINE_PATH: str = ""
+    # 象棋虚拟棋子：True = 点落点先预览、再点一次确认；False = 点落点直接走子
+    XIANGQI_VIRTUAL_PIECE: bool = False
 
     @field_validator("DEFAULT_LLM")
     @classmethod

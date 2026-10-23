@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from app.ai.difficulty import DEFAULT_DIFFICULTY, depth_of
 from app.ai.gomoku.engine import GomokuEngine
+from app.ai.xiangqi.engine import XiangqiEngine
 from app.common.logging import setup_logging
 from app.common.paths import _base_dir
 from app.db.connection import connect
@@ -14,6 +16,7 @@ from app.db.repositories import GameRepository, MoveRepository
 from app.llm.registry import LLMRegistry
 from app.services.commentary_service import CommentaryService
 from app.services.game_service import GameService
+from app.services.game_spec import GameServiceFactory
 from app.settings import Settings, load_settings
 
 
@@ -25,6 +28,8 @@ class AppContext:
     game_service: GameService
     commentary_service: CommentaryService
     llm_registry: LLMRegistry
+    # 棋种切换工厂（含各棋种引擎）；None 表示不支持切换（旧用法/测试）
+    game_factory: GameServiceFactory | None = field(default=None)
 
 
 def bootstrap() -> AppContext:
@@ -53,13 +58,21 @@ def bootstrap() -> AppContext:
             settings.DEFAULT_LLM,
         )
 
-    engine = GomokuEngine()
-    game_service = GameService(
-        engine=engine,
+    xq_exe = Path(settings.XIANGQI_ENGINE_PATH) if settings.XIANGQI_ENGINE_PATH else None
+    xiangqi_engine = XiangqiEngine(exe_path=xq_exe)
+    if not xiangqi_engine.available:
+        # 引擎文件缺失只影响象棋模式：五子棋照常，UI 会隐藏象棋入口
+        logger.warning(
+            "Pikafish 引擎未找到（%s），象棋模式不可用",
+            xq_exe if xq_exe is not None else "assets/engines/pikafish.exe",
+        )
+
+    factory = GameServiceFactory(
+        engines={"gomoku": GomokuEngine(), "xiangqi": xiangqi_engine},
         game_repo=game_repo,
         move_repo=move_repo,
-        user_color=1,
     )
+    game_service = factory.create(factory.default_game, user_color=1)
     game_service.config.difficulty_depth = depth_of(DEFAULT_DIFFICULTY)
     game_service.config.difficulty_name = DEFAULT_DIFFICULTY.value
     # model_name 保持 None：UI 模型下拉默认「空白」（不进行 AI 解说）
@@ -71,4 +84,5 @@ def bootstrap() -> AppContext:
         game_service=game_service,
         commentary_service=commentary_service,
         llm_registry=registry,
+        game_factory=factory,
     )

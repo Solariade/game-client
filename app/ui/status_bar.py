@@ -35,6 +35,7 @@ class StatusBar(ttk.Frame):
         ).pack(side="right")
 
         self._wait_who: str | None = None
+        self._wait_verb = "落子"
         self._wait_start = 0.0
         self._after_id: str | None = None
 
@@ -56,12 +57,15 @@ class StatusBar(ttk.Frame):
 
     # ---- 落子等待读秒 ----
 
-    def start_wait(self, who: str) -> None:
+    def start_wait(self, who: str, verb: str | None = None) -> None:
         """开始为 who（你 / AI）读秒。
 
+        verb 为动作文案（五子棋「落子」/象棋「行棋」），缺省沿用当前值。
         等待方不变时（如解说结束后仍轮到你）不重置计数；
         切换等待方时从 0 重新计。
         """
+        if verb is not None:
+            self._wait_verb = verb
         if self._wait_who != who:
             self._wait_who = who
             self._wait_start = time.monotonic()
@@ -98,7 +102,7 @@ class StatusBar(ttk.Frame):
             return
         seconds = int(time.monotonic() - self._wait_start)
         try:
-            self._timer_var.set(f"等待 {self._wait_who} 落子 {seconds} 秒")
+            self._timer_var.set(f"等待 {self._wait_who} {self._wait_verb} {seconds} 秒")
         except tk.TclError:  # pragma: no cover - 窗口已销毁
             self._cancel_tick()
 
